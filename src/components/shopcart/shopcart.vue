@@ -26,9 +26,29 @@
       </transition>
       </div>
     </div>
+    <div class="shopcart-list" v-show="listShow">
+      <div class="list-header">
+        <h1 class="title">购物车</h1>
+        <span class="empty">清空</span>
+      </div>
+      <div class="list-content">
+        <ul>
+          <li class="food" v-for="(food, index) in selectFoods" :key="index">
+            <span class="name">{{food.name}}</span>
+            <div class="price">
+              <span>￥{{food.price*food.count}}</span>
+            </div>
+            <div class="cartcontrol-rapper">
+              <cartcontrol :food="food"></cartcontrol>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
   </div>
 </template>
 <script type="text/ecmascript-6">
+import cartcontrol from 'components/cartcontrol/cartcontrol'
 export default {
   props: {
     selectFoods: {
@@ -75,14 +95,19 @@ export default {
         // 优化精度丢失解决方案
         let foodPrice = food.price
         let foodCount = food.count
-        if (foodPrice >= 0 && foodPrice < 100) {
-          total += ((foodPrice * 10) * foodCount) / 10
-        } else if (foodPrice >= 100 && foodPrice < 1000) {
-          total += ((foodPrice * 100) * foodCount) / 100
-        } else {
-          console.log('精度丢失')
-        }
-        // 解决精度丢失问题(原始方案)
+        let newFoodPrice = 0
+        // 解决精度丢失问题 V3.0
+        newFoodPrice = this.accMul(foodPrice, foodCount)
+        total = this.accAdd(total, newFoodPrice)
+        // 解决精度丢失问题 V2.0
+        // if (foodPrice >= 0 && foodPrice < 100) {
+        //   total += ((foodPrice * 10) / 10) * foodCount
+        // } else if (foodPrice >= 100 && foodPrice < 1000) {
+        //   total += ((foodPrice * 100) / 100) * foodCount
+        // } else {
+        //   console.log('精度丢失')
+        // }
+        // 解决精度丢失问题 V1.0
         // total += ((food.price * 10) * food.count) / 10
       })
       return total
@@ -113,6 +138,86 @@ export default {
     }
   },
   methods: {
+    // 解决精度丢失问题(加减乘除)
+    // 加法
+    accAdd (arg1, arg2) {
+      let len1 = 0
+      let len2 = 0
+      let times = 0
+      let result = 0
+      try {
+        len1 = arg1.toString().split('.')[1].length
+      } catch (e) {
+        len1 = 0
+      }
+      try {
+        len2 = arg2.toString().split('.')[1].length
+      } catch (e) {
+        len2 = 0
+      }
+      times = Math.pow(10, Math.max(len1, len2))
+      result = (arg1 * times + arg2 * times) / times
+      return result
+    },
+    // 减法
+    accSub (arg1, arg2) {
+      let len1 = 0
+      let len2 = 0
+      let times = 0
+      let maxPrecision = 0
+      let result = 0
+      try {
+        len1 = arg1.toString().split('.')[1].length
+      } catch (e) {
+        len1 = 0
+      }
+      try {
+        len2 = arg2.toString().split('.')[1].length
+      } catch (e) {
+        len2 = 0
+      }
+      times = Math.pow(10, Math.max(len1, len2))
+      maxPrecision = (len1 > len2) ? len1 : len2
+      result = ((arg1 * times + arg2 * times) / times).toFixed(maxPrecision)
+      return result
+    },
+    // 乘法
+    accMul (arg1, arg2) {
+      let s1 = arg1.toString()
+      let s2 = arg2.toString()
+      let times = 0
+      let result = 0
+      try {
+        times += s1.split('.')[1].length
+      } catch (e) {
+      }
+      try {
+        times += s2.split('.')[1].length
+      } catch (e) {
+      }
+      result = Number(s1.replace('.', '')) * Number(s2.replace('.', '')) / Math.pow(10, times)
+      return result
+    },
+    // 除法
+    accDiv (arg1, arg2) {
+      let len1 = 0
+      let len2 = 0
+      let r1 = 0
+      let r2 = 0
+      let result = 0
+      try {
+        len1 = arg1.toString().split('.')[1].length
+      } catch (e) {
+      }
+      try {
+        len2 = arg2.toString().split('.')[1].length
+      } catch (e) {
+      }
+      r1 = Number(arg1.toString().replace('.', ''))
+      r2 = Number(arg2.toString().replace('.', ''))
+      result = this.accMul((r1 / r2), Math.pow(10, len2 - len1))
+      return result
+    },
     drop (el) {
       for (let i = 0; i < this.balls.length; i++) {
         let ball = this.balls[i]
@@ -159,6 +264,9 @@ export default {
         el.style.display = 'none'
       }
     }
+  },
+  components: {
+    cartcontrol
   }
 }
 </script>
